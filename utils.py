@@ -6,6 +6,24 @@ from six.moves import cPickle
 import numpy as np
 import re
 import itertools
+import bz2
+import gzip
+import lzma
+
+def read_all(fname, encoding):
+    FORMATS = (
+        (".lzma", lzma.open)
+        (".bz2", bz2.open),
+        (".gz", gzip.open),
+        ("", codecs.open)
+    )
+    for (ext, fopen) in FORMATS:
+        try:
+            with fopen(fname + ext, "r", encoding=encoding) as f:
+                return f.read()
+        except:
+            if ext == "":
+                raise
 
 class TextLoader():
     def __init__(self, data_dir, batch_size, seq_length, encoding=None):
@@ -62,9 +80,7 @@ class TextLoader():
         return [vocabulary, vocabulary_inv]
 
     def preprocess(self, input_file, vocab_file, tensor_file, encoding):
-        with codecs.open(input_file, "r", encoding=encoding) as f:
-            data = f.read()
-
+        data = read_all(input_file, encoding)
         # Optional text cleaning or make them lower case, etc.
         #data = self.clean_str(data)
         x_text = data.split()
