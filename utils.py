@@ -12,7 +12,7 @@ import lzma
 
 def read_all(fname, encoding):
     FORMATS = (
-        (".lzma", lzma.open)
+        (".lzma", lzma.open),
         (".bz2", bz2.open),
         (".gz", gzip.open),
         ("", codecs.open)
