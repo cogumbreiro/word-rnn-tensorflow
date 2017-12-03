@@ -12,11 +12,17 @@ from collections import namedtuple
 from model import Model
 
 def topk(arr, count):
-    return heapq.nlargest(count, range(len(arr)), arr.take)
+    """
+    Returns the indices of `count` maximum values in a numpy array.
+    """
+    return (-arr).argsort()[:count]
 
 Term = namedtuple('Term', ['name', 'probability'])
 
 class TermDistribution:
+    """
+    A dictionary of term distribution, for each key yields the probability.
+    """
     def __init__(self, words, vocab, probs):
         self.words = words
         self.vocab = vocab
