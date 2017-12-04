@@ -17,29 +17,29 @@ def main():
     parser.add_argument('--input_encoding', type=str, default=None,
                        help='character encoding of input.txt, from https://docs.python.org/3/library/codecs.html#standard-encodings')
     parser.add_argument('--log_dir', type=str, default='logs',
-                       help='directory containing tensorboard logs')
+                       help='directory containing tensorboard logs. Default: %(default)s')
     parser.add_argument('--save_dir', type=str, default='save',
-                       help='directory to store checkpointed models')
+                       help='directory to store checkpointed models. Default: %(default)s')
     parser.add_argument('--rnn_size', type=int, default=256,
-                       help='size of RNN hidden state')
+                       help='size of RNN hidden state. Default: %(default)s')
     parser.add_argument('--num_layers', type=int, default=2,
-                       help='number of layers in the RNN')
+                       help='number of layers in the RNN. Default: %(default)s')
     parser.add_argument('--model', type=str, default='lstm',
-                       help='rnn, gru, or lstm')
+                       help='rnn, gru, or lstm. Default: %(default)s')
     parser.add_argument('--batch_size', type=int, default=50,
-                       help='minibatch size')
+                       help='minibatch size. Default: %(default)s')
     parser.add_argument('--seq_length', type=int, default=25,
-                       help='RNN sequence length')
+                       help='RNN sequence length. Default: %(default)s')
     parser.add_argument('--num_epochs', type=int, default=50,
-                       help='number of epochs')
+                       help='number of epochs. Default: %(default)s')
     parser.add_argument('--save_every', type=int, default=1000,
-                       help='save frequency')
+                       help='save frequency. Default: %(default)s')
     parser.add_argument('--grad_clip', type=float, default=5.,
-                       help='clip gradients at this value')
+                       help='clip gradients at this value. Default: %(default)s')
     parser.add_argument('--learning_rate', type=float, default=0.002,
-                       help='learning rate')
+                       help='learning rate. Default: %(default)s')
     parser.add_argument('--decay_rate', type=float, default=0.97,
-                       help='decay rate for rmsprop')
+                       help='decay rate for rmsprop. Default: %(default)s')
     parser.add_argument('--gpu_mem', type=float, default=0.666,
                        help='%% of gpu memory to be allocated to this process. Default is 66.6%%')
     parser.add_argument('--init_from', type=str, default=None,
@@ -109,6 +109,7 @@ def train(args):
             if args.init_from is not None:
                 data_loader.pointer = model.batch_pointer.eval()
                 args.init_from = None
+            start_time = time.time()
             for b in range(data_loader.pointer, data_loader.num_batches):
                 start = time.time()
                 x, y = data_loader.next_batch()
@@ -118,11 +119,25 @@ def train(args):
                                                              model.train_op, model.inc_batch_pointer_op], feed)
                 train_writer.add_summary(summary, e * data_loader.num_batches + b)
                 speed = time.time() - start
+
                 if (e * data_loader.num_batches + b) % args.batch_size == 0:
-                    print("{}/{} (epoch {}), train_loss = {:.3f}, time/batch = {:.3f}" \
-                        .format(e * data_loader.num_batches + b,
-                                args.num_epochs * data_loader.num_batches,
-                                e, train_loss, speed))
+                    handled = e * data_loader.num_batches + b
+                    total = args.num_epochs * data_loader.num_batches
+                    ratio = float(handled) / float(total)
+                    curr = time.time() - start_time
+                    batch_todo = (total - handled) // args.batch_size
+                    avg_time_per_batch = curr / (handled // args.batch_size) if handled > 0 else 0
+                    if avg_time_per_batch == 0:
+                        eta = ""
+                    else:
+                        m, s = divmod(batch_todo * avg_time_per_batch, 60)
+                        h, m = divmod(m, 60)
+                        eta = "ETA %d:%02d:%02d" % (h, m, s)
+                    print("{}/{} = {}% (epoch {}), train_loss = {:.3f}, time/batch = {:.3f} {}" \
+                        .format(handled,
+                                total,
+                                int(ratio * 100),
+                                e, train_loss, speed, eta))
                 if (e * data_loader.num_batches + b) % args.save_every == 0 \
                         or (e==args.num_epochs-1 and b == data_loader.num_batches-1): # save for the last result
                     checkpoint_path = os.path.join(args.save_dir, 'model.ckpt')
