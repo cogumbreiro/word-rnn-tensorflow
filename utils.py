@@ -20,9 +20,14 @@ def read_all(fname, encoding):
     for (ext, fopen) in FORMATS:
         try:
             with fopen(fname + ext, "r", encoding=encoding) as f:
-                return f.read()
+                data = f.read()
+                if isinstance(data, bytes):
+                    if encoding is None:
+                        encoding = "utf8"
+                    data = data.decode(encoding)
+                return data
         except:
-            if ext == "":
+            if ext == ".bz2":
                 raise
 
 class TextLoader():
@@ -87,7 +92,6 @@ class TextLoader():
 
         self.vocab, self.words = self.build_vocab(x_text)
         self.vocab_size = len(self.words)
-
         with open(vocab_file, 'wb') as f:
             cPickle.dump(self.words, f)
 
